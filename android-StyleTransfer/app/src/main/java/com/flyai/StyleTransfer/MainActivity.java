@@ -9,16 +9,19 @@ import androidx.core.content.FileProvider;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
@@ -26,6 +29,10 @@ import android.widget.ViewFlipper;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 
 public class MainActivity extends AppCompatActivity {
     // Elements for flip pages
@@ -45,7 +52,9 @@ public class MainActivity extends AppCompatActivity {
     final int contentIndex = 1;
     Uri contentUri;
     // Elements for result
+    Button startTrain;
     TextView progressText;
+    ProgressBar trainingProgress;
     ImageView resultImage;
     Button saveResult;
     Uri resultUri;
@@ -55,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     final int PICK_STYLE_CAMERA = 4;
     final int PICK_CONTENT_GALLERY = 5;
     final int PICK_CONTENT_CAMERA = 6;
+    final String BASE_URL = "localhost://5000";
     String basePath;
 
     @Override
@@ -72,7 +82,9 @@ public class MainActivity extends AppCompatActivity {
         contentGallery = (Button) findViewById(R.id.contentGallery);
         contentCamera = (Button) findViewById(R.id.contentCamera);
         contentImage = (ImageView) findViewById(R.id.contentImage);
+        saveResult = (Button) findViewById(R.id.startTrain);
         progressText = (TextView) findViewById(R.id.progressText);
+        trainingProgress = (ProgressBar) findViewById(R.id.trainingProgress);
         resultImage = (ImageView) findViewById(R.id.resultImage);
         saveResult = (Button) findViewById(R.id.saveResult);
         basePath = getApplicationContext().getFilesDir().getAbsolutePath();
@@ -98,10 +110,12 @@ public class MainActivity extends AppCompatActivity {
                         beforeButton.setEnabled(false);
                         afterButton.setEnabled(false);
                         afterButton.setText("다음");
-                        saveResult.setText("모델 훈련 시작");
                         styleImage.setVisibility(View.GONE);
                         contentImage.setVisibility(View.GONE);
+                        progressText.setVisibility(View.GONE);
+                        trainingProgress.setVisibility(View.GONE);
                         resultImage.setVisibility(View.GONE);
+                        saveResult.setVisibility(View.GONE);
                         viewFlipper.showNext();
                         break;
                     }
@@ -192,6 +206,36 @@ public class MainActivity extends AppCompatActivity {
                 else {
                     startActivityForResult(takePictureIntent, PICK_CONTENT_CAMERA);
                 }
+            }
+        });
+
+        // Start Training
+        startTrain.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startTrain.setVisibility(View.GONE);
+                progressText.setVisibility(View.VISIBLE);
+                trainingProgress.setVisibility(View.VISIBLE);
+
+                // load style and content images
+                File styleFile = new File(basePath + "/style.jpg");
+                File contentFile = new File(basePath + "/content.jpg");
+
+                RequestBody requestStyleBody = RequestBody.create(MediaType.parse("image/jpeg"), styleFile);
+                MultipartBody.Part styleToUpload = MultipartBody.Part.createFormData(
+                        "style_img",
+                        styleFile.getName(),
+                        requestStyleBody
+                );
+                RequestBody requestContentBody = RequestBody.create(MediaType.parse("image/jpeg"), contentFile);
+                MultipartBody.Part contentToUpload = MultipartBody.Part.createFormData(
+                        "user_img",
+                        contentFile.getName(),
+                        requestStyleBody
+                );
+
+                SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                String token = sp.getString("TOKEN", "");
             }
         });
 
