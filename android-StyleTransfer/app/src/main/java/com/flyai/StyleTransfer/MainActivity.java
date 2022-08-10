@@ -1,9 +1,14 @@
 package com.flyai.StyleTransfer;
 
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -45,10 +50,11 @@ public class MainActivity extends AppCompatActivity {
     // Constants
     final int PICK_STYLE_GALLERY = 3;
     final int PICK_STYLE_CAMERA = 4;
+    final int PERMISSION_STYLE_CAMERA = 8;
+    final int PERMISSION_CONTENT_CAMERA = 9;
     final int PICK_CONTENT_GALLERY = 5;
     final int PICK_CONTENT_CAMERA = 6;
-
-
+    Uri cameraUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,7 +142,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                startActivityForResult(takePictureIntent, PICK_STYLE_CAMERA);
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                        == PackageManager.PERMISSION_DENIED) {
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.CAMERA},
+                            PICK_STYLE_CAMERA);
+                }
+                else {
+                    startActivityForResult(takePictureIntent, PICK_STYLE_CAMERA);
+                }
             }
         });
         contentGallery.setOnClickListener(new View.OnClickListener(){
@@ -147,7 +161,51 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(photoPickerIntent, PICK_CONTENT_GALLERY);
             }
         });
+        contentCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                        == PackageManager.PERMISSION_DENIED) {
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.CAMERA},
+                            PICK_CONTENT_CAMERA);
+                }
+                else {
+                    startActivityForResult(takePictureIntent, PICK_CONTENT_CAMERA);
+                }
+            }
+        });
 
+    }
+
+    protected void getImageFromCamera(int requestCode) {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_DENIED) {
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.CAMERA},
+                    requestCode);
+        }
+        else {
+            startActivityForResult(takePictureIntent, requestCode);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        switch (requestCode) {
+            case PICK_STYLE_CAMERA:
+            case PICK_CONTENT_CAMERA:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startActivityForResult(takePictureIntent, requestCode);
+                } else {
+                    Toast.makeText(MainActivity.this, "권한을 허용해야 합니다", Toast.LENGTH_LONG).show();
+                }
+                break;
+        }
     }
 
     @Override
@@ -173,15 +231,11 @@ public class MainActivity extends AppCompatActivity {
             }
             case PICK_STYLE_CAMERA: {
                 try {
-                    styleUri = data.getData();
-                    InputStream imageStream = getContentResolver().openInputStream(styleUri);
-                    Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                    Bundle extras = data.getExtras();
+                    Bitmap selectedImage = (Bitmap) extras.get("data");
                     styleImage.setImageBitmap(selectedImage);
                     styleImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 촬영해주세요", Toast.LENGTH_LONG).show();
@@ -207,15 +261,11 @@ public class MainActivity extends AppCompatActivity {
             }
             case PICK_CONTENT_CAMERA: {
                 try {
-                    contentUri = data.getData();
-                    InputStream imageStream = getContentResolver().openInputStream(styleUri);
-                    Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                    Bundle extras = data.getExtras();
+                    Bitmap selectedImage = (Bitmap) extras.get("data");
                     contentImage.setImageBitmap(selectedImage);
                     contentImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 촬영해주세요", Toast.LENGTH_LONG).show();
