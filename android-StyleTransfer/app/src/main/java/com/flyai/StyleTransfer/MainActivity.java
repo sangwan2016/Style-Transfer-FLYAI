@@ -1,13 +1,20 @@
 package com.flyai.StyleTransfer;
 
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
@@ -16,6 +23,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
@@ -47,8 +55,7 @@ public class MainActivity extends AppCompatActivity {
     final int PICK_STYLE_CAMERA = 4;
     final int PICK_CONTENT_GALLERY = 5;
     final int PICK_CONTENT_CAMERA = 6;
-
-
+    String basePath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
         progressText = (TextView) findViewById(R.id.progressText);
         resultImage = (ImageView) findViewById(R.id.resultImage);
         saveResult = (Button) findViewById(R.id.saveResult);
+        basePath = getApplicationContext().getFilesDir().getAbsolutePath();
 
         // Page actions
         afterButton.setOnClickListener(new View.OnClickListener() {
@@ -135,8 +143,24 @@ public class MainActivity extends AppCompatActivity {
         styleCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                File file = new File(basePath + "/style.jpg");
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                startActivityForResult(takePictureIntent, PICK_STYLE_CAMERA);
+                takePictureIntent.putExtra(
+                        MediaStore.EXTRA_OUTPUT,
+                        FileProvider.getUriForFile(
+                                getApplicationContext(),
+                                "com.flyai.StyleTransfer.fileprovider",
+                                file
+                ));
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                        == PackageManager.PERMISSION_DENIED) {
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.CAMERA},
+                            PICK_STYLE_CAMERA);
+                }
+                else {
+                    startActivityForResult(takePictureIntent, PICK_STYLE_CAMERA);
+                }
             }
         });
         contentGallery.setOnClickListener(new View.OnClickListener(){
@@ -147,7 +171,69 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(photoPickerIntent, PICK_CONTENT_GALLERY);
             }
         });
+        contentCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                File file = new File(basePath +"/content.jpg");
+                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                takePictureIntent.putExtra(
+                        MediaStore.EXTRA_OUTPUT,
+                        FileProvider.getUriForFile(
+                                getApplicationContext(),
+                                "com.flyai.StyleTransfer.fileprovider",
+                                file
+                        ));
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                        == PackageManager.PERMISSION_DENIED) {
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.CAMERA},
+                            PICK_CONTENT_CAMERA);
+                }
+                else {
+                    startActivityForResult(takePictureIntent, PICK_CONTENT_CAMERA);
+                }
+            }
+        });
 
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        switch (requestCode) {
+            case PICK_STYLE_CAMERA:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    File file = new File(basePath +"/style.jpg");
+                    takePictureIntent.putExtra(
+                            MediaStore.EXTRA_OUTPUT,
+                            FileProvider.getUriForFile(
+                                    getApplicationContext(),
+                                    "com.flyai.StyleTransfer.fileprovider",
+                                    file
+                            ));
+                    startActivityForResult(takePictureIntent, requestCode);
+                } else {
+                    Toast.makeText(MainActivity.this, "권한을 허용해야 합니다", Toast.LENGTH_LONG).show();
+                }
+                break;
+            case PICK_CONTENT_CAMERA:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    File file = new File(basePath +"/content.jpg");
+                    takePictureIntent.putExtra(
+                            MediaStore.EXTRA_OUTPUT,
+                            FileProvider.getUriForFile(
+                                    getApplicationContext(),
+                                    "com.flyai.StyleTransfer.fileprovider",
+                                    file
+                            ));
+                    startActivityForResult(takePictureIntent, requestCode);
+                } else {
+                    Toast.makeText(MainActivity.this, "권한을 허용해야 합니다", Toast.LENGTH_LONG).show();
+                }
+                break;
+        }
     }
 
     @Override
@@ -173,15 +259,12 @@ public class MainActivity extends AppCompatActivity {
             }
             case PICK_STYLE_CAMERA: {
                 try {
-                    styleUri = data.getData();
-                    InputStream imageStream = getContentResolver().openInputStream(styleUri);
-                    Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                    BitmapFactory.Options bmpFactoryOptions = new BitmapFactory.Options();
+                    bmpFactoryOptions.inSampleSize = 1;
+                    Bitmap selectedImage = BitmapFactory.decodeFile(basePath + "/style.jpg", bmpFactoryOptions);
                     styleImage.setImageBitmap(selectedImage);
                     styleImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 촬영해주세요", Toast.LENGTH_LONG).show();
@@ -207,15 +290,12 @@ public class MainActivity extends AppCompatActivity {
             }
             case PICK_CONTENT_CAMERA: {
                 try {
-                    contentUri = data.getData();
-                    InputStream imageStream = getContentResolver().openInputStream(styleUri);
-                    Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                    BitmapFactory.Options bmpFactoryOptions = new BitmapFactory.Options();
+                    bmpFactoryOptions.inSampleSize = 1;
+                    Bitmap selectedImage = BitmapFactory.decodeFile(basePath + "/content.jpg", bmpFactoryOptions);
                     contentImage.setImageBitmap(selectedImage);
                     contentImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 촬영해주세요", Toast.LENGTH_LONG).show();
