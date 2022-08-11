@@ -57,7 +57,7 @@ class RetrofitTest {
 
     Retrofit retrofit;
     MainActivity.RetrofitService service;
-    final String BASE_URL = "http://10.0.2.2:5000";
+    final String BASE_URL = "http://172.20.10.9:5000";
 
     public static RetrofitTest retrofitTest = new RetrofitTest();
 
@@ -360,6 +360,7 @@ public class MainActivity extends AppCompatActivity {
                             "");
                     Toast.makeText(getApplicationContext(), "저장을 완료하였습니다!", Toast.LENGTH_LONG).show();
                     saveResult.setEnabled(false);
+                    afterButton.setEnabled(true);
                 } catch (FileNotFoundException e) {
                     Toast.makeText(getApplicationContext(), "파일 저장에 실패하였습니다.", Toast.LENGTH_LONG).show();
                 }
