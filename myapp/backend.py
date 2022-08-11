@@ -39,4 +39,5 @@ def uploader_file():
         return send_file("." + transfer_img, mimetype='image/jpg')
 
 if __name__=="__main__":
-    app.run(host="172.20.10.9", port=5000)
+    # app.run(host="172.20.10.9", port=5000)
+    app.run()

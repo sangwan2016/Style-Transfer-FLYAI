@@ -57,7 +57,7 @@ class RetrofitTest {
 
     Retrofit retrofit;
     MainActivity.RetrofitService service;
-    final String BASE_URL = "http://172.20.10.9:5000";
+    final String BASE_URL = "http://10.0.2.2:5000";
 
     public static RetrofitTest retrofitTest = new RetrofitTest();
 
@@ -67,10 +67,10 @@ class RetrofitTest {
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(
                         new OkHttpClient.Builder()
-                                .callTimeout(3, TimeUnit.HOURS)
-                                .connectTimeout(3, TimeUnit.HOURS)
-                                .readTimeout(3, TimeUnit.HOURS)
-                                .writeTimeout(3, TimeUnit.HOURS)
+                                .callTimeout(1, TimeUnit.HOURS)
+                                .connectTimeout(1, TimeUnit.HOURS)
+                                .readTimeout(1, TimeUnit.HOURS)
+                                .writeTimeout(1, TimeUnit.HOURS)
                                 .build()
                 )
                 .build();
@@ -297,7 +297,7 @@ public class MainActivity extends AppCompatActivity {
                 MultipartBody.Part contentToUpload = MultipartBody.Part.createFormData(
                         "user_img",
                         contentFile.getName(),
-                        requestStyleBody
+                        requestContentBody
                 );
                 ArrayList<MultipartBody.Part> images = new ArrayList<>();
                 images.add(styleToUpload); images.add(contentToUpload);
