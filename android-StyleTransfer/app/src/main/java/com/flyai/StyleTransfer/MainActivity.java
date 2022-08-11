@@ -34,6 +34,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -110,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
         @Multipart
         @POST("/uploader")
         Call<ResponseBody> ImageUpload(
-                @Part MultipartBody.Part image
+                @Part List<MultipartBody.Part> images
         );
     }
 
@@ -281,25 +283,12 @@ public class MainActivity extends AppCompatActivity {
                         contentFile.getName(),
                         requestStyleBody
                 );
+                ArrayList<MultipartBody.Part> images = new ArrayList<>();
+                images.add(styleToUpload); images.add(contentToUpload);
                 // call to upload
-                Call<ResponseBody> callStyle = RetrofitTest.getInstance().getService().ImageUpload(styleToUpload);
-                Call<ResponseBody> callContent = RetrofitTest.getInstance().getService().ImageUpload(contentToUpload);
+                Call<ResponseBody> call = RetrofitTest.getInstance().getService().ImageUpload(images);
 
-                callStyle.enqueue(new Callback<ResponseBody>() {
-                    @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                        if (response.body() == null) {
-                            Log.d("Debug", "no body");
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        t.printStackTrace();
-                        Log.d("Debug", "onFaliure" + t.toString());
-                    }
-                });
-                callContent.enqueue(new Callback<ResponseBody>() {
+                call.enqueue(new Callback<ResponseBody>() {
                     @Override
                     public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                         if (response.body() == null) {
