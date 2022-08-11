@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request
 import os
 
-import neural_style_transfer
+#import neural_style_transfer
+import styletransfer
+from PIL import Image
 
 app=Flask(__name__)
 
@@ -25,12 +27,15 @@ def uploader_file():
         style_img.save(path+'/static/'+str(style_img.filename))
         style_img_path=path+'/static/'+str(style_img.filename)
 
-        transfer_img=neural_style_transfer.main(user_img_path,style_img_path)
-        transfer_img.save(path+'/static/'+str(style_img.filename))
-        transfer_img_path=path+'/static/'+str(transfer_img.filename)
+        #transfer_img=neural_style_transfer.main(user_img_path,style_img_path)
+        transfer_img=styletransfer.main(user_img_path,style_img_path)
+        #transfer_img.save(path+'/static/'+transfer_img)
+        #transfer_img_path=path+'/static/'+str(transfer_img)
+        transfer_img_path=path+str(transfer_img)
 
-        return render_template('post.html', user_img=str(user_img.filename), style_img=str(style_img.filename), transfer_img=str(transfer_img.filename))
+
+        #return render_template('post.html', user_img=str(user_img.filename), style_img=str(style_img.filename), transfer_img=transfer_img_path)
+        return render_template('post.html', transfer_img=transfer_img_path)
 
 if __name__=="__main__":
     app.run()
-
