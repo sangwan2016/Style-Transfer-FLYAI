@@ -153,7 +153,7 @@ def main(user_img_path,style_img_path):
     evaluator = Evaluator()
 
     result_prefix = 'style_transfer_result'
-    iterations = 20
+    iterations = 2000
 
     # 뉴럴 스타일 트랜스퍼의 손실을 최소화하기 위해 생성된 이미지에 대해 L-BFGS 최적화를 수행합니다
     # 초기 값은 타깃 이미지입니다

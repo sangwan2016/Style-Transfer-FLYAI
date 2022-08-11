@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_file
 import os
 
 #import neural_style_transfer
@@ -35,7 +35,8 @@ def uploader_file():
 
 
         #return render_template('post.html', user_img=str(user_img.filename), style_img=str(style_img.filename), transfer_img=transfer_img_path)
-        return render_template('post.html', transfer_img=transfer_img_path)
+        # return render_template('post.html', transfer_img=transfer_img_path)
+        return send_file("." + transfer_img, mimetype='image/jpg')
 
 if __name__=="__main__":
-    app.run()
+    app.run(host="172.20.10.9", port=5000)

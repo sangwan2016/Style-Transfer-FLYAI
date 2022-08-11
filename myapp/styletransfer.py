@@ -157,7 +157,7 @@ def main(user_img_path,style_img_path):
     optimizer = optim.Adam([input_img.requires_grad_()], lr=0.01)
     content_weight = 1e1
     style_weight = 1e4
-    iteration = 100           
+    iteration = 200           
     content_layer = 'conv5_1'
     style_layers_dict = {'conv1_1':0.75,
                         'conv2_1':0.5,
