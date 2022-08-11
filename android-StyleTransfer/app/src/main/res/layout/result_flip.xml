@@ -10,13 +10,23 @@
         android:layout_height="wrap_content"
         android:textSize="20dp"
         android:textStyle="bold"
+        android:layout_margin="10dp"
         android:text="3. Style Transfer 결과"
         ></TextView>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="모델 훈련 시작"
+        android:visibility="visible"
+        android:id="@+id/startTrain"
+        ></Button>
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="15dp"
         android:text="모델 실행중입니다..."
+        android:visibility="gone"
         android:id="@+id/progressText"
         ></TextView>
     <ProgressBar style="?android:attr/progressBarStyleHorizontal"
@@ -25,7 +35,7 @@
         android:layout_margin="10dp"
         android:max="100"
         android:progress="20"
-        android:visibility="visible"
+        android:visibility="gone"
         android:id="@+id/trainingProgress"
         ></ProgressBar>
     <ImageView
@@ -40,8 +50,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="모델 훈련 시작"
-        android:visibility="visible"
+        android:text="사진 저장"
+        android:visibility="gone"
         android:id="@+id/saveResult"
         ></Button>
 </LinearLayout>
