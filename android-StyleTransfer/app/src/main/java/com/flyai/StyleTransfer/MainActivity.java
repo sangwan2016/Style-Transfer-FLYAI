@@ -18,6 +18,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -26,13 +27,52 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.Multipart;
+import retrofit2.http.POST;
+import retrofit2.http.Part;
+
+class RetrofitTest {
+
+    Retrofit retrofit;
+    MainActivity.RetrofitService service;
+    final String BASE_URL = "http://10.0.2.2:5000";
+
+    public static RetrofitTest retrofitTest = new RetrofitTest();
+
+    private RetrofitTest() {
+        retrofit = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        service = retrofit.create(MainActivity.RetrofitService.class);
+    }
+
+    public static RetrofitTest getInstance() {
+        return retrofitTest;
+    }
+
+    public MainActivity.RetrofitService getService() {
+        return service;
+    }
+}
 
 public class MainActivity extends AppCompatActivity {
     // Elements for flip pages
@@ -64,8 +104,15 @@ public class MainActivity extends AppCompatActivity {
     final int PICK_STYLE_CAMERA = 4;
     final int PICK_CONTENT_GALLERY = 5;
     final int PICK_CONTENT_CAMERA = 6;
-    final String BASE_URL = "localhost://5000";
     String basePath;
+
+    interface RetrofitService {
+        @Multipart
+        @POST("/uploader")
+        Call<ResponseBody> ImageUpload(
+                @Part MultipartBody.Part image
+        );
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         contentGallery = (Button) findViewById(R.id.contentGallery);
         contentCamera = (Button) findViewById(R.id.contentCamera);
         contentImage = (ImageView) findViewById(R.id.contentImage);
-        saveResult = (Button) findViewById(R.id.startTrain);
+        startTrain = (Button) findViewById(R.id.startTrain);
         progressText = (TextView) findViewById(R.id.progressText);
         trainingProgress = (ProgressBar) findViewById(R.id.trainingProgress);
         resultImage = (ImageView) findViewById(R.id.resultImage);
@@ -216,11 +263,12 @@ public class MainActivity extends AppCompatActivity {
                 startTrain.setVisibility(View.GONE);
                 progressText.setVisibility(View.VISIBLE);
                 trainingProgress.setVisibility(View.VISIBLE);
+                beforeButton.setEnabled(false);
 
                 // load style and content images
                 File styleFile = new File(basePath + "/style.jpg");
                 File contentFile = new File(basePath + "/content.jpg");
-
+                // set requestbody and multipartbody for upload
                 RequestBody requestStyleBody = RequestBody.create(MediaType.parse("image/jpeg"), styleFile);
                 MultipartBody.Part styleToUpload = MultipartBody.Part.createFormData(
                         "style_img",
@@ -233,9 +281,38 @@ public class MainActivity extends AppCompatActivity {
                         contentFile.getName(),
                         requestStyleBody
                 );
+                // call to upload
+                Call<ResponseBody> callStyle = RetrofitTest.getInstance().getService().ImageUpload(styleToUpload);
+                Call<ResponseBody> callContent = RetrofitTest.getInstance().getService().ImageUpload(contentToUpload);
 
-                SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                String token = sp.getString("TOKEN", "");
+                callStyle.enqueue(new Callback<ResponseBody>() {
+                    @Override
+                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                        if (response.body() == null) {
+                            Log.d("Debug", "no body");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ResponseBody> call, Throwable t) {
+                        t.printStackTrace();
+                        Log.d("Debug", "onFaliure" + t.toString());
+                    }
+                });
+                callContent.enqueue(new Callback<ResponseBody>() {
+                    @Override
+                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                        if (response.body() == null) {
+                            Log.d("Debug", "no body");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ResponseBody> call, Throwable t) {
+                        t.printStackTrace();
+                        Log.d("Debug", "onFaliure" + t.toString());
+                    }
+                });
             }
         });
 
