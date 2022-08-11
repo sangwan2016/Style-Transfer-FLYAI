@@ -32,11 +32,16 @@ import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -60,6 +65,14 @@ class RetrofitTest {
         retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
+                .client(
+                        new OkHttpClient.Builder()
+                                .callTimeout(3, TimeUnit.HOURS)
+                                .connectTimeout(3, TimeUnit.HOURS)
+                                .readTimeout(3, TimeUnit.HOURS)
+                                .writeTimeout(3, TimeUnit.HOURS)
+                                .build()
+                )
                 .build();
 
         service = retrofit.create(MainActivity.RetrofitService.class);
@@ -110,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         @Multipart
         @POST("/uploader")
         Call<ResponseBody> ImageUpload(
-                @Part MultipartBody.Part image
+                @Part List<MultipartBody.Part> images
         );
     }
 
@@ -159,10 +172,13 @@ public class MainActivity extends AppCompatActivity {
                         afterButton.setText("다음");
                         styleImage.setVisibility(View.GONE);
                         contentImage.setVisibility(View.GONE);
+                        startTrain.setVisibility(View.VISIBLE);
                         progressText.setVisibility(View.GONE);
+                        progressText.setText("모델 실행중입니다...");
                         trainingProgress.setVisibility(View.GONE);
                         resultImage.setVisibility(View.GONE);
                         saveResult.setVisibility(View.GONE);
+                        saveResult.setEnabled(true);
                         viewFlipper.showNext();
                         break;
                     }
@@ -205,6 +221,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 File file = new File(basePath + "/style.jpg");
+                if (file.exists()) { file.delete(); }
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 takePictureIntent.putExtra(
                         MediaStore.EXTRA_OUTPUT,
@@ -236,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 File file = new File(basePath +"/content.jpg");
+                if (file.exists()) { file.delete(); }
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 takePictureIntent.putExtra(
                         MediaStore.EXTRA_OUTPUT,
@@ -281,15 +299,37 @@ public class MainActivity extends AppCompatActivity {
                         contentFile.getName(),
                         requestStyleBody
                 );
+                ArrayList<MultipartBody.Part> images = new ArrayList<>();
+                images.add(styleToUpload); images.add(contentToUpload);
                 // call to upload
-                Call<ResponseBody> callStyle = RetrofitTest.getInstance().getService().ImageUpload(styleToUpload);
-                Call<ResponseBody> callContent = RetrofitTest.getInstance().getService().ImageUpload(contentToUpload);
+                Call<ResponseBody> call = RetrofitTest.getInstance().getService().ImageUpload(images);
 
-                callStyle.enqueue(new Callback<ResponseBody>() {
+                call.enqueue(new Callback<ResponseBody>() {
                     @Override
                     public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                        if (response.body() == null) {
+                        if (response.body() != null) {
+                            InputStream is = response.body().byteStream();
+                            Bitmap resultBitmap = BitmapFactory.decodeStream(is);
+                            // save to file
+                            File file = new File(basePath +"/result.jpg");
+                            if (file.exists()) { file.delete(); }
+                            try {
+                                FileOutputStream out = new FileOutputStream(file);
+                                resultBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                                out.flush();
+                                out.close();
+                            } catch (IOException e) { e.printStackTrace(); }
+                            // set imageview
+                            resultImage.setImageBitmap(resultBitmap);
+                            resultImage.setVisibility(View.VISIBLE);
+                            saveResult.setVisibility(View.VISIBLE);
+                            progressText.setVisibility(View.GONE);
+                            trainingProgress.setVisibility(View.GONE);
+                        } else {
                             Log.d("Debug", "no body");
+                            progressText.setText("오류가 발생했습니다. 처음부터 다시 시도해주세요.");
+                            trainingProgress.setVisibility(View.GONE);
+                            afterButton.setEnabled(true);
                         }
                     }
 
@@ -297,22 +337,32 @@ public class MainActivity extends AppCompatActivity {
                     public void onFailure(Call<ResponseBody> call, Throwable t) {
                         t.printStackTrace();
                         Log.d("Debug", "onFaliure" + t.toString());
+                        progressText.setText("오류가 발생했습니다. 처음부터 다시 시도해주세요.");
+                        trainingProgress.setVisibility(View.GONE);
+                        afterButton.setEnabled(true);
                     }
                 });
-                callContent.enqueue(new Callback<ResponseBody>() {
-                    @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                        if (response.body() == null) {
-                            Log.d("Debug", "no body");
-                        }
-                    }
+            }
+        });
 
-                    @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        t.printStackTrace();
-                        Log.d("Debug", "onFaliure" + t.toString());
-                    }
-                });
+        // after training, save the result to gallery
+        saveResult.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                BitmapFactory.Options bmpFactoryOptions = new BitmapFactory.Options();
+//                bmpFactoryOptions.inSampleSize = 1;
+//                Bitmap selectedImage = BitmapFactory.decodeFile(basePath + "/result.jpg", bmpFactoryOptions);
+                try {
+                    MediaStore.Images.Media.insertImage(
+                            getContentResolver(),
+                            basePath + "/result.jpg",
+                            "result",
+                            "");
+                    Toast.makeText(getApplicationContext(), "저장을 완료하였습니다!", Toast.LENGTH_LONG).show();
+                    saveResult.setEnabled(false);
+                } catch (FileNotFoundException e) {
+                    Toast.makeText(getApplicationContext(), "파일 저장에 실패하였습니다.", Toast.LENGTH_LONG).show();
+                }
             }
         });
 
@@ -366,15 +416,22 @@ public class MainActivity extends AppCompatActivity {
                     styleUri = data.getData();
                     InputStream imageStream = getContentResolver().openInputStream(styleUri);
                     Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                    // save to file
+                    File file = new File(basePath +"/style.jpg");
+                    if (file.exists()) { file.delete(); }
+                    FileOutputStream out = new FileOutputStream(file);
+                    selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    out.flush(); out.close();
+                    // set imageview
                     styleImage.setImageBitmap(selectedImage);
                     styleImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 선택해주세요", Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 }
                 break;
             }
@@ -395,17 +452,24 @@ public class MainActivity extends AppCompatActivity {
             case PICK_CONTENT_GALLERY: {
                 try {
                     contentUri = data.getData();
-                    InputStream imageStream = getContentResolver().openInputStream(styleUri);
+                    InputStream imageStream = getContentResolver().openInputStream(contentUri);
                     Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                    // save to file
+                    File file = new File(basePath +"/content.jpg");
+                    if (file.exists()) { file.delete(); }
+                    FileOutputStream out = new FileOutputStream(file);
+                    selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    out.flush(); out.close();
+                    // set imageview
                     contentImage.setImageBitmap(selectedImage);
                     contentImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 선택해주세요", Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "오류가 발생했습니다", Toast.LENGTH_LONG).show();
                 }
                 break;
             }
