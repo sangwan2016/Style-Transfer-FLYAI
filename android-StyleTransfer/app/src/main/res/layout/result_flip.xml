@@ -38,14 +38,6 @@
         android:visibility="gone"
         android:id="@+id/trainingProgress"
         ></ProgressBar>
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:src="@drawable/result_example"
-        android:scaleType="fitCenter"
-        android:visibility="gone"
-        android:id="@+id/resultImage"
-        ></ImageView>
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -54,4 +46,12 @@
         android:visibility="gone"
         android:id="@+id/saveResult"
         ></Button>
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/result_example"
+        android:scaleType="fitCenter"
+        android:visibility="gone"
+        android:id="@+id/resultImage"
+        ></ImageView>
 </LinearLayout>
