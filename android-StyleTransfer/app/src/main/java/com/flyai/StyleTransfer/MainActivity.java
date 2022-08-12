@@ -65,10 +65,10 @@ class RetrofitTest {
 
     private RetrofitTest() {
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
-        httpClient.callTimeout(3, TimeUnit.HOURS)
-            .connectTimeout(3, TimeUnit.HOURS)
-            .readTimeout(3, TimeUnit.HOURS)
-            .writeTimeout(3, TimeUnit.HOURS);
+        httpClient.callTimeout(10, TimeUnit.HOURS)
+            .connectTimeout(10, TimeUnit.HOURS)
+            .readTimeout(10, TimeUnit.HOURS)
+            .writeTimeout(10, TimeUnit.HOURS);
         httpClient.addInterceptor(new Interceptor() {
             @NonNull
             @Override
@@ -334,6 +334,7 @@ public class MainActivity extends AppCompatActivity {
                             saveResult.setVisibility(View.VISIBLE);
                             progressText.setVisibility(View.GONE);
                             trainingProgress.setVisibility(View.GONE);
+                            afterButton.setEnabled(true);
                         } else {
                             Log.d("Debug", "no body");
                             progressText.setText("오류가 발생했습니다. 처음부터 다시 시도해주세요.");
@@ -369,7 +370,6 @@ public class MainActivity extends AppCompatActivity {
                             "");
                     Toast.makeText(getApplicationContext(), "저장을 완료하였습니다!", Toast.LENGTH_LONG).show();
                     saveResult.setEnabled(false);
-                    afterButton.setEnabled(true);
                 } catch (FileNotFoundException e) {
                     Toast.makeText(getApplicationContext(), "파일 저장에 실패하였습니다.", Toast.LENGTH_LONG).show();
                 }
