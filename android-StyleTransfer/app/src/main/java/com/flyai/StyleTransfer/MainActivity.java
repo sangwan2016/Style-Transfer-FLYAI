@@ -13,6 +13,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -59,7 +61,7 @@ class RetrofitTest {
 
     Retrofit retrofit;
     MainActivity.RetrofitService service;
-    final String BASE_URL = "http://10.0.2.2:5000";
+    final String BASE_URL = "http://172.20.10.9:5000";
 
     public static RetrofitTest retrofitTest = new RetrofitTest();
 
@@ -432,6 +434,8 @@ public class MainActivity extends AppCompatActivity {
                     FileOutputStream out = new FileOutputStream(file);
                     selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, out);
                     out.flush(); out.close();
+                    // rotate bitmap
+                    selectedImage = rotateBitmap(basePath + "/style.jpg");
                     // set imageview
                     styleImage.setImageBitmap(selectedImage);
                     styleImage.setVisibility(View.VISIBLE);
@@ -447,15 +451,17 @@ public class MainActivity extends AppCompatActivity {
             }
             case PICK_STYLE_CAMERA: {
                 try {
-                    BitmapFactory.Options bmpFactoryOptions = new BitmapFactory.Options();
-                    bmpFactoryOptions.inSampleSize = 1;
-                    Bitmap selectedImage = BitmapFactory.decodeFile(basePath + "/style.jpg", bmpFactoryOptions);
+                    // rotate bitmap
+                    Bitmap selectedImage = rotateBitmap(basePath + "/style.jpg");
                     styleImage.setImageBitmap(selectedImage);
                     styleImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 촬영해주세요", Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "오류가 발생했습니다.", Toast.LENGTH_LONG).show();
                 }
                 break;
             }
@@ -470,6 +476,8 @@ public class MainActivity extends AppCompatActivity {
                     FileOutputStream out = new FileOutputStream(file);
                     selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, out);
                     out.flush(); out.close();
+                    // rotate bitmap
+                    selectedImage = rotateBitmap(basePath + "/content.jpg");
                     // set imageview
                     contentImage.setImageBitmap(selectedImage);
                     contentImage.setVisibility(View.VISIBLE);
@@ -485,18 +493,82 @@ public class MainActivity extends AppCompatActivity {
             }
             case PICK_CONTENT_CAMERA: {
                 try {
-                    BitmapFactory.Options bmpFactoryOptions = new BitmapFactory.Options();
-                    bmpFactoryOptions.inSampleSize = 1;
-                    Bitmap selectedImage = BitmapFactory.decodeFile(basePath + "/content.jpg", bmpFactoryOptions);
+                    // rotate bitmap
+                    Bitmap selectedImage = rotateBitmap(basePath + "/content.jpg");
                     contentImage.setImageBitmap(selectedImage);
                     contentImage.setVisibility(View.VISIBLE);
                     afterButton.setEnabled(true);
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                     Toast.makeText(MainActivity.this, "사진을 촬영해주세요", Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "오류가 발생했습니다.", Toast.LENGTH_LONG).show();
                 }
                 break;
             }
+        }
+    }
+
+    public static Bitmap rotateBitmap(String path) throws IOException{
+        // load bitmap from file path
+        BitmapFactory.Options bmpFactoryOptions = new BitmapFactory.Options();
+        bmpFactoryOptions.inSampleSize = 1;
+        Bitmap bitmap = BitmapFactory.decodeFile(path, bmpFactoryOptions);
+        // get rotation information
+        ExifInterface exif = new ExifInterface(path);
+        int orientation = exif.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_UNDEFINED
+        );
+
+        Matrix matrix = new Matrix();
+        switch (orientation) {
+            case ExifInterface.ORIENTATION_NORMAL:
+                return bitmap;
+            case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
+                matrix.setScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                matrix.setRotate(180);
+                break;
+            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
+                matrix.setRotate(180);
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_TRANSPOSE:
+                matrix.setRotate(90);
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                matrix.setRotate(90);
+                break;
+            case ExifInterface.ORIENTATION_TRANSVERSE:
+                matrix.setRotate(-90);
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                matrix.setRotate(-90);
+                break;
+            default:
+                return bitmap;
+        }
+        try {
+            // create rotated bitmap
+            Bitmap bmRotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+            bitmap.recycle();
+            // save rotated file
+            File file = new File(path);
+            if (file.exists()) { file.delete(); }
+            FileOutputStream out = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+            out.flush(); out.close();
+            // return rotated bitmap
+            return bmRotated;
+        }
+        catch (OutOfMemoryError e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }
