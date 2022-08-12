@@ -39,9 +39,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -62,18 +64,25 @@ class RetrofitTest {
     public static RetrofitTest retrofitTest = new RetrofitTest();
 
     private RetrofitTest() {
-        retrofit = new Retrofit.Builder()
+        OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
+        httpClient.callTimeout(3, TimeUnit.HOURS)
+            .connectTimeout(3, TimeUnit.HOURS)
+            .readTimeout(3, TimeUnit.HOURS)
+            .writeTimeout(3, TimeUnit.HOURS);
+        httpClient.addInterceptor(new Interceptor() {
+            @NonNull
+            @Override
+            public okhttp3.Response intercept(@NonNull Chain chain) throws IOException {
+                Request request = chain.request().newBuilder().addHeader("Connection", "close").build();
+                return chain.proceed(request);
+            }
+        });
+
+        Retrofit.Builder builder = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
-                .client(
-                        new OkHttpClient.Builder()
-                                .callTimeout(1, TimeUnit.HOURS)
-                                .connectTimeout(1, TimeUnit.HOURS)
-                                .readTimeout(1, TimeUnit.HOURS)
-                                .writeTimeout(1, TimeUnit.HOURS)
-                                .build()
-                )
-                .build();
+                .client(httpClient.build());
+        retrofit = builder.build();
 
         service = retrofit.create(MainActivity.RetrofitService.class);
     }
