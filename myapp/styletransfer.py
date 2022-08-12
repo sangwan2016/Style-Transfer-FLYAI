@@ -19,6 +19,8 @@ import time
 import torch.nn.functional as F
 from torchvision.utils import save_image
 
+import cv2
+
 torch.backends.cudnn.deterministic = True # Use cudnn as deterministic mode for reproducibility
 torch.backends.cudnn.benchmark = False
 
@@ -34,17 +36,8 @@ def imshow(tensor, title=None):
     image = tensor.cpu().clone()  # we clone the tensor to not do changes on it
     image = image.squeeze(0)      # remove the fake batch dimension
     image = unloader(image)
-#     plt.imshow(image)
-#     if title is not None:
-#         plt.title(title)
 
-# plt.figure(figsize=(12, 8))
-# ax = plt.subplot(1, 2, 1)
-# imshow(style_img, title='Style Image')
 
-# plt.subplot(1, 2, 2)
-# imshow(content_img, title='Content Image')
-# plt.show()
 #Here, you first need to split submodules in VGG-19 to construct content loss and style loss.
 #Specifically, you need to store each submodule in a form of "torch.nn.modules.container.Sequential".
 # The "Sequential" module is a container of nn.Module objects. With Sequential containers,
@@ -93,17 +86,6 @@ def get_style_loss(pred_features, target_features, style_layers_dict):
     return loss
 
 
-
-
-# plt.figure(figsize=(16, 8))
-# plt.subplot(1, 3, 1)
-# imshow(style_img, title='Style Image')
-# plt.subplot(1, 3, 2)
-# imshow(content_img, title='Content Image')
-# plt.subplot(1, 3, 3)
-# imshow(input_img, title='Output Image')
-# plt.show()
-
 def main(user_img_path,style_img_path):
     global device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -116,8 +98,7 @@ def main(user_img_path,style_img_path):
         transforms.Resize((imsize, imsize)),  # scale imported image
         transforms.ToTensor()])  # transform it into a torch tensor
 
-    # style_img = image_loader("./static/style.jpg")
-    # content_img = image_loader("./static/5.jpg")
+
     style_img = image_loader(style_img_path)
     content_img = image_loader(user_img_path)
     assert style_img.size() == content_img.size(), \
@@ -157,7 +138,7 @@ def main(user_img_path,style_img_path):
     optimizer = optim.Adam([input_img.requires_grad_()], lr=0.01)
     content_weight = 1e1
     style_weight = 1e4
-    iteration = 2000           
+    iteration = 2000        
     content_layer = 'conv5_1'
     style_layers_dict = {'conv1_1':0.75,
                         'conv2_1':0.5,
@@ -183,7 +164,18 @@ def main(user_img_path,style_img_path):
             print()
             
     input_img.data.clamp_(0, 1)
-    #print('train done')
-    save_image(input_img,'./static/'+fname)
+
+    # resize back to original image
+    input_img = input_img * 255.0
+    img = input_img[0].cpu().permute(1, 2, 0).detach().numpy()
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.astype(np.uint8).copy()
+    restore_size: _Shape = cv2.imread(user_img_path).shape
+    img = cv2.resize(
+        src=img,
+        dsize=(restore_size[1], restore_size[0]),
+        interpolation=cv2.INTER_CUBIC
+    )
+    cv2.imwrite("./static/" + fname, img)
 
     return '/static/'+fname
