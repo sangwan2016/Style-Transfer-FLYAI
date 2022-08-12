@@ -561,7 +561,6 @@ public class MainActivity extends AppCompatActivity {
             File file = new File(path);
             if (file.exists()) { file.delete(); }
             FileOutputStream out = new FileOutputStream(file);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
             out.flush(); out.close();
             // return rotated bitmap
             return bmRotated;
